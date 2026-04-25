@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>核心邏輯預覽</title>
+    <!-- Prism.js 樣式 (Okaidia 深色主題) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" rel="stylesheet" />
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .code-container {
+            width: 100%;
+            max-width: 800px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+            background: #272822;
+            /* 符合 okaidia 背景色 */
+        }
+
+        .header {
+            background: #1e1e1e;
+            padding: 12px 20px;
+            font-size: 14px;
+            color: #888;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dev-red {
+            background: #ff5f56;
+        }
+
+        .dev-yellow {
+            background: #ffbd2e;
+        }
+
+        .dev-green {
+            background: #27c93f;
+        }
+
+        pre[class*="language-"] {
+            margin: 0 !important;
+            border-radius: 0 0 12px 12px !important;
+            padding: 20px !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="code-container">
+        <div class="header">
+            <div class="dot dev-red"></div>
+            <div class="dot dev-yellow"></div>
+            <div class="dot dev-green"></div>
+            <span style="margin-left: 10px;">Astronaut.js</span>
+        </div>
+        <pre><code class="language-javascript">// 核心邏輯預覽
+class Astronaut {
+    constructor() {
+        this.x = 400;
+        this.y = 300;
+        this.vx = 0; // 水平速度
+        this.vy = 0; // 垂直速度
+        this.accel = 0.2; // 噴氣加速度
+        this.friction = 0.96; // 穩定器摩擦力
+        this.dampener = true; // 穩定器開關
+    }
+
+    update(keys) {
+        // 噴氣移動
+        if (keys['ArrowUp'])    this.vy -= this.accel;
+        if (keys['ArrowDown'])  this.vy += this.accel;
+        if (keys['ArrowLeft'])  this.vx -= this.accel;
+        if (keys['ArrowRight']) this.vx += this.accel;
+
+        // 穩定器邏輯
+        if (this.dampener) {
+            this.vx *= this.friction;
+            this.vy *= this.friction;
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+    }
+}</code></pre>
+    </div>
+
+    <!-- Prism.js 核心與 JavaScript 語法支援 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+
+</body>
+
+</html>
