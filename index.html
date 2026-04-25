@@ -3,111 +3,147 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>核心邏輯預覽</title>
-    <!-- Prism.js 樣式 (Okaidia 深色主題) -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" rel="stylesheet" />
+    <title>太空吸塵器 - 原型開發</title>
     <style>
         body {
-            background-color: #121212;
-            color: #ffffff;
-            font-family: 'Inter', 'Segoe UI', sans-serif;
-            padding: 40px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .code-container {
-            width: 100%;
-            max-width: 800px;
-            border-radius: 12px;
+            margin: 0;
             overflow: hidden;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
-            background: #272822;
-            /* 符合 okaidia 背景色 */
+            background: #050505;
+            color: white;
+            font-family: Arial;
         }
 
-        .header {
-            background: #1e1e1e;
-            padding: 12px 20px;
-            font-size: 14px;
-            color: #888;
-            border-bottom: 1px solid #333;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        canvas {
+            display: block;
         }
 
-        .dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
         }
 
-        .dev-red {
-            background: #ff5f56;
+        .status {
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 5px;
         }
 
-        .dev-yellow {
-            background: #ffbd2e;
+        .on {
+            background: #2ecc71;
         }
 
-        .dev-green {
-            background: #27c93f;
-        }
-
-        pre[class*="language-"] {
-            margin: 0 !important;
-            border-radius: 0 0 12px 12px !important;
-            padding: 20px !important;
+        .off {
+            background: #e74c3c;
         }
     </style>
 </head>
 
 <body>
 
-    <div class="code-container">
-        <div class="header">
-            <div class="dot dev-red"></div>
-            <div class="dot dev-yellow"></div>
-            <div class="dot dev-green"></div>
-            <span style="margin-left: 10px;">Astronaut.js</span>
-        </div>
-        <pre><code class="language-javascript">// 核心邏輯預覽
-class Astronaut {
-    constructor() {
-        this.x = 400;
-        this.y = 300;
-        this.vx = 0; // 水平速度
-        this.vy = 0; // 垂直速度
-        this.accel = 0.2; // 噴氣加速度
-        this.friction = 0.96; // 穩定器摩擦力
-        this.dampener = true; // 穩定器開關
-    }
-
-    update(keys) {
-        // 噴氣移動
-        if (keys['ArrowUp'])    this.vy -= this.accel;
-        if (keys['ArrowDown'])  this.vy += this.accel;
-        if (keys['ArrowLeft'])  this.vx -= this.accel;
-        if (keys['ArrowRight']) this.vx += this.accel;
-
-        // 穩定器邏輯
-        if (this.dampener) {
-            this.vx *= this.friction;
-            this.vy *= this.friction;
-        }
-
-        this.x += this.vx;
-        this.y += this.vy;
-    }
-}</code></pre>
+    <div id="ui">
+        <h1>太空吸塵器測試版</h1>
+        <p>移動: 方向鍵 | 切換穩定器: <b style="color:yellow">T</b></p>
+        <p>穩定器狀態: <span id="dampener-status" class="status on">ON</span></p>
     </div>
 
-    <!-- Prism.js 核心與 JavaScript 語法支援 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <canvas id="gameCanvas"></canvas>
 
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const dampenerDisplay = document.getElementById('dampener-status');
+
+        // 初始化畫布大小
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // 遊戲邏輯變數
+        let keys = {};
+        let player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            vx: 0,
+            vy: 0,
+            accel: 0.15,
+            friction: 0.95, // 穩定器煞車力道
+            isDampenerOn: true,
+            radius: 15
+        };
+
+        // 監聽鍵盤
+        window.addEventListener('keydown', e => {
+            keys[e.key] = true;
+            if (e.key.toLowerCase() === 't') {
+                player.isDampenerOn = !player.isDampenerOn;
+                updateUI();
+            }
+        });
+        window.addEventListener('keyup', e => keys[e.key] = false);
+
+        function updateUI() {
+            dampenerDisplay.innerText = player.isDampenerOn ? "ON" : "OFF";
+            dampenerDisplay.className = "status " + (player.isDampenerOn ? "on" : "off");
+        }
+
+        function update() {
+            // 噴氣加速
+            if (keys['ArrowUp']) player.vy -= player.accel;
+            if (keys['ArrowDown']) player.vy += player.accel;
+            if (keys['ArrowLeft']) player.vx -= player.accel;
+            if (keys['ArrowRight']) player.vx += player.accel;
+
+            // 穩定器邏輯 (自動減速)
+            if (player.isDampenerOn) {
+                // 如果沒按按鍵，就施加摩擦力
+                if (!keys['ArrowUp'] && !keys['ArrowDown']) player.vy *= player.friction;
+                if (!keys['ArrowLeft'] && !keys['ArrowRight']) player.vx *= player.friction;
+            }
+
+            // 更新位置
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // 邊界反彈 (簡單處理)
+            if (player.x < 0 || player.x > canvas.width) player.vx *= -0.5;
+            if (player.y < 0 || player.y > canvas.height) player.vy *= -0.5;
+        }
+
+        function draw() {
+            // 清除畫面
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製太空人 (暫時用圓圈代替)
+            ctx.save();
+            ctx.translate(player.x, player.y);
+
+            // 畫出太空人主體
+            ctx.beginPath();
+            ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+
+            // 畫一個簡單的面罩，代表方向
+            ctx.fillStyle = '#333';
+            ctx.fillRect(5, -5, 10, 10);
+
+            ctx.restore();
+
+            // 循環執行
+            update();
+            requestAnimationFrame(draw);
+        }
+
+        // 啟動遊戲
+        draw();
+
+    </script>
 </body>
 
 </html>
