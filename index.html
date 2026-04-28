@@ -2,148 +2,391 @@
 <html lang="zh-TW">
 
 <head>
-    <meta charset="UTF-8">
-    <title>太空吸塵器 - 原型開發</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: #050505;
-            color: white;
-            font-family: Arial;
-        }
+  <meta charset="UTF-8">
+  <title>太空吸塵器 - 原型開發</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #0b1026 0%, #050505 70%);
+      color: white;
+      font-family: Arial, sans-serif;
+    }
 
-        canvas {
-            display: block;
-        }
+    canvas {
+      display: block;
+    }
 
-        #ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            pointer-events: none;
-        }
+    #ui {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      pointer-events: none;
+      background: rgba(5, 8, 20, 0.45);
+      padding: 14px 18px;
+      border-radius: 14px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.25);
+    }
 
-        .status {
-            font-weight: bold;
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
+    #ui h1 {
+      margin: 0 0 10px;
+      font-size: 24px;
+    }
 
-        .on {
-            background: #2ecc71;
-        }
+    #ui p {
+      margin: 6px 0;
+    }
 
-        .off {
-            background: #e74c3c;
-        }
-    </style>
+    .status {
+      font-weight: bold;
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+
+    .on {
+      background: #2ecc71;
+      color: #04150b;
+    }
+
+    .off {
+      background: #e74c3c;
+    }
+
+    .vacuum-on {
+      color: #7fd8ff;
+      font-weight: bold;
+    }
+
+    .vacuum-off {
+      color: #999;
+      font-weight: bold;
+    }
+  </style>
 </head>
 
 <body>
 
-    <div id="ui">
-        <h1>太空吸塵器測試版</h1>
-        <p>移動: 方向鍵 | 切換穩定器: <b style="color:yellow">T</b></p>
-        <p>穩定器狀態: <span id="dampener-status" class="status on">ON</span></p>
-    </div>
+  <div id="ui">
+    <h1>太空吸塵器測試版</h1>
+    <p>移動: 方向鍵 | 切換穩定器: <b style="color:yellow">T</b> | 吸塵器: <b style="color:#7fd8ff">Space</b></p>
+    <p>穩定器狀態: <span id="dampener-status" class="status on">ON</span></p>
+    <p>吸塵器狀態: <span id="vacuum-status" class="vacuum-off">OFF</span></p>
+    <p>清理數量: <span id="score">0</span></p>
+  </div>
 
-    <canvas id="gameCanvas"></canvas>
+  <canvas id="gameCanvas"></canvas>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const dampenerDisplay = document.getElementById('dampener-status');
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const dampenerDisplay = document.getElementById('dampener-status');
+    const vacuumDisplay = document.getElementById('vacuum-status');
+    const scoreDisplay = document.getElementById('score');
 
-        // 初始化畫布大小
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+    let stars = [];
+    let debrisList = [];
+    let score = 0;
+    let keys = {};
+
+    const player = {
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      accel: 0.15,
+      friction: 0.95,
+      isDampenerOn: true,
+      radius: 18,
+      facing: 0,
+      vacuumRange: 180,
+      vacuumForce: 0.22,
+      collectRadius: 26
+    };
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      if (player.x === 0 && player.y === 0) {
+        player.x = canvas.width / 2;
+        player.y = canvas.height / 2;
+      }
+
+      createStars();
+    }
+
+    window.addEventListener('resize', resize);
+
+    function random(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function createStars() {
+      const starCount = Math.max(80, Math.floor((canvas.width * canvas.height) / 12000));
+      stars = Array.from({ length: starCount }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: Math.random() * 1.8 + 0.4,
+        alpha: Math.random() * 0.8 + 0.2
+      }));
+    }
+
+    function createDebris(count = 14) {
+      debrisList = [];
+      for (let i = 0; i < count; i++) {
+        spawnDebris();
+      }
+    }
+
+    function spawnDebris() {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = random(120, Math.min(canvas.width, canvas.height) * 0.45);
+      const size = random(7, 15);
+
+      debrisList.push({
+        x: player.x + Math.cos(angle) * distance,
+        y: player.y + Math.sin(angle) * distance,
+        vx: random(-0.35, 0.35),
+        vy: random(-0.35, 0.35),
+        size,
+        rotation: random(0, Math.PI * 2),
+        spin: random(-0.03, 0.03),
+        hue: random(180, 240)
+      });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.key] = true;
+
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+      }
+
+      if (e.key.toLowerCase() === 't' && !e.repeat) {
+        player.isDampenerOn = !player.isDampenerOn;
+        updateUI();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.key] = false;
+    });
+
+    function updateUI() {
+      dampenerDisplay.innerText = player.isDampenerOn ? 'ON' : 'OFF';
+      dampenerDisplay.className = 'status ' + (player.isDampenerOn ? 'on' : 'off');
+
+      const vacuumActive = !!(keys[' '] || keys['Spacebar'] || keys['Space']);
+      vacuumDisplay.innerText = vacuumActive ? 'ON' : 'OFF';
+      vacuumDisplay.className = vacuumActive ? 'vacuum-on' : 'vacuum-off';
+
+      scoreDisplay.innerText = score;
+    }
+
+    function updatePlayer() {
+      if (keys['ArrowUp']) player.vy -= player.accel;
+      if (keys['ArrowDown']) player.vy += player.accel;
+      if (keys['ArrowLeft']) player.vx -= player.accel;
+      if (keys['ArrowRight']) player.vx += player.accel;
+
+      if (player.isDampenerOn) {
+        if (!keys['ArrowUp'] && !keys['ArrowDown']) player.vy *= player.friction;
+        if (!keys['ArrowLeft'] && !keys['ArrowRight']) player.vx *= player.friction;
+      }
+
+      player.x += player.vx;
+      player.y += player.vy;
+
+      if (Math.abs(player.vx) > 0.05 || Math.abs(player.vy) > 0.05) {
+        player.facing = Math.atan2(player.vy, player.vx);
+      }
+
+      if (player.x < player.radius) {
+        player.x = player.radius;
+        player.vx *= -0.5;
+      }
+      if (player.x > canvas.width - player.radius) {
+        player.x = canvas.width - player.radius;
+        player.vx *= -0.5;
+      }
+      if (player.y < player.radius) {
+        player.y = player.radius;
+        player.vy *= -0.5;
+      }
+      if (player.y > canvas.height - player.radius) {
+        player.y = canvas.height - player.radius;
+        player.vy *= -0.5;
+      }
+    }
+
+    function updateDebris() {
+      const vacuumActive = !!(keys[' '] || keys['Spacebar'] || keys['Space']);
+
+      for (let i = debrisList.length - 1; i >= 0; i--) {
+        const debris = debrisList[i];
+        const dx = player.x - debris.x;
+        const dy = player.y - debris.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (vacuumActive && dist < player.vacuumRange) {
+          const pull = (1 - dist / player.vacuumRange) * player.vacuumForce;
+          debris.vx += (dx / dist) * pull;
+          debris.vy += (dy / dist) * pull;
         }
-        window.addEventListener('resize', resize);
-        resize();
 
-        // 遊戲邏輯變數
-        let keys = {};
-        let player = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            vx: 0,
-            vy: 0,
-            accel: 0.15,
-            friction: 0.95, // 穩定器煞車力道
-            isDampenerOn: true,
-            radius: 15
-        };
+        debris.x += debris.vx;
+        debris.y += debris.vy;
+        debris.rotation += debris.spin;
 
-        // 監聽鍵盤
-        window.addEventListener('keydown', e => {
-            keys[e.key] = true;
-            if (e.key.toLowerCase() === 't') {
-                player.isDampenerOn = !player.isDampenerOn;
-                updateUI();
-            }
-        });
-        window.addEventListener('keyup', e => keys[e.key] = false);
+        debris.vx *= 0.995;
+        debris.vy *= 0.995;
 
-        function updateUI() {
-            dampenerDisplay.innerText = player.isDampenerOn ? "ON" : "OFF";
-            dampenerDisplay.className = "status " + (player.isDampenerOn ? "on" : "off");
+        if (debris.x < -40) debris.x = canvas.width + 40;
+        if (debris.x > canvas.width + 40) debris.x = -40;
+        if (debris.y < -40) debris.y = canvas.height + 40;
+        if (debris.y > canvas.height + 40) debris.y = -40;
+
+        if (dist < player.collectRadius) {
+          debrisList.splice(i, 1);
+          score += 1;
+          spawnDebris();
+          updateUI();
         }
+      }
+    }
 
-        function update() {
-            // 噴氣加速
-            if (keys['ArrowUp']) player.vy -= player.accel;
-            if (keys['ArrowDown']) player.vy += player.accel;
-            if (keys['ArrowLeft']) player.vx -= player.accel;
-            if (keys['ArrowRight']) player.vx += player.accel;
+    function drawStars() {
+      for (const star of stars) {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+        ctx.fill();
+      }
+    }
 
-            // 穩定器邏輯 (自動減速)
-            if (player.isDampenerOn) {
-                // 如果沒按按鍵，就施加摩擦力
-                if (!keys['ArrowUp'] && !keys['ArrowDown']) player.vy *= player.friction;
-                if (!keys['ArrowLeft'] && !keys['ArrowRight']) player.vx *= player.friction;
-            }
+    function drawDebris() {
+      for (const debris of debrisList) {
+        ctx.save();
+        ctx.translate(debris.x, debris.y);
+        ctx.rotate(debris.rotation);
 
-            // 更新位置
-            player.x += player.vx;
-            player.y += player.vy;
+        ctx.fillStyle = `hsl(${debris.hue}, 70%, 70%)`;
+        ctx.beginPath();
+        ctx.moveTo(-debris.size * 0.8, -debris.size * 0.3);
+        ctx.lineTo(-debris.size * 0.2, -debris.size * 0.9);
+        ctx.lineTo(debris.size * 0.8, -debris.size * 0.2);
+        ctx.lineTo(debris.size * 0.5, debris.size * 0.8);
+        ctx.lineTo(-debris.size * 0.7, debris.size * 0.5);
+        ctx.closePath();
+        ctx.fill();
 
-            // 邊界反彈 (簡單處理)
-            if (player.x < 0 || player.x > canvas.width) player.vx *= -0.5;
-            if (player.y < 0 || player.y > canvas.height) player.vy *= -0.5;
-        }
+        ctx.restore();
+      }
+    }
 
-        function draw() {
-            // 清除畫面
-            ctx.fillStyle = '#050505';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+    function drawVacuumBeam() {
+      const vacuumActive = !!(keys[' '] || keys['Spacebar'] || keys['Space']);
+      if (!vacuumActive) return;
 
-            // 繪製太空人 (暫時用圓圈代替)
-            ctx.save();
-            ctx.translate(player.x, player.y);
+      const beamLength = player.vacuumRange;
+      const beamWidth = 70;
+      const nozzleX = player.x + Math.cos(player.facing) * 22;
+      const nozzleY = player.y + Math.sin(player.facing) * 22;
 
-            // 畫出太空人主體
-            ctx.beginPath();
-            ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
-            ctx.fillStyle = 'white';
-            ctx.fill();
+      ctx.save();
+      ctx.translate(nozzleX, nozzleY);
+      ctx.rotate(player.facing);
 
-            // 畫一個簡單的面罩，代表方向
-            ctx.fillStyle = '#333';
-            ctx.fillRect(5, -5, 10, 10);
+      const gradient = ctx.createLinearGradient(0, 0, beamLength, 0);
+      gradient.addColorStop(0, 'rgba(140, 220, 255, 0.35)');
+      gradient.addColorStop(1, 'rgba(140, 220, 255, 0)');
 
-            ctx.restore();
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(beamLength, -beamWidth / 2);
+      ctx.lineTo(beamLength, beamWidth / 2);
+      ctx.closePath();
+      ctx.fill();
 
-            // 循環執行
-            update();
-            requestAnimationFrame(draw);
-        }
+      for (let i = 0; i < 3; i++) {
+        ctx.strokeStyle = `rgba(180, 235, 255, ${0.35 - i * 0.08})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(beamLength * (0.75 + i * 0.08), (-beamWidth / 3) + i * 22);
+        ctx.stroke();
+      }
 
-        // 啟動遊戲
-        draw();
+      ctx.restore();
+    }
 
-    </script>
+    function drawPlayer() {
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      ctx.rotate(player.facing);
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.moveTo(-8, 14);
+      ctx.lineTo(-18, 26);
+      ctx.moveTo(8, 14);
+      ctx.lineTo(18, 26);
+      ctx.moveTo(-18, -2);
+      ctx.lineTo(-32, 8);
+      ctx.moveTo(12, -4);
+      ctx.lineTo(28, -8);
+      ctx.stroke();
+
+      ctx.fillStyle = '#e9eef7';
+      ctx.beginPath();
+      ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#b8c7d9';
+      ctx.fillRect(-10, 12, 20, 18);
+
+      ctx.fillStyle = '#7fd8ff';
+      ctx.beginPath();
+      ctx.ellipse(6, -4, 11, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#8a8f98';
+      ctx.fillRect(10, 4, 20, 6);
+      ctx.fillRect(24, 2, 8, 10);
+
+      if (keys[' '] || keys['Spacebar'] || keys['Space']) {
+        ctx.fillStyle = '#b8ecff';
+        ctx.beginPath();
+        ctx.arc(36, 7, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawStars();
+      drawVacuumBeam();
+      drawDebris();
+      drawPlayer();
+    }
+
+    function gameLoop() {
+      updatePlayer();
+      updateDebris();
+      updateUI();
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    resize();
+    createDebris();
+    updateUI();
+    gameLoop();
+  </script>
 </body>
 
 </html>
