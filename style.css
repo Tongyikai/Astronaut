@@ -1,0 +1,96 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at center, #0b1026 0%, #050505 70%);
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+canvas {
+  display: block;
+}
+
+#ui {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  pointer-events: none;
+  background: rgba(5, 8, 20, 0.6);
+  padding: 14px 18px;
+  border-radius: 14px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  max-width: 420px;
+}
+
+#ui h1 { margin: 0 0 10px; font-size: 22px; color: #7fd8ff; }
+#ui p { margin: 6px 0; font-size: 14px; }
+.status { font-weight: bold; padding: 2px 8px; border-radius: 4px; }
+.on { background: #2ecc71; color: #04150b; }
+.off { background: #e74c3c; color: white; }
+.hint { color: #ffd166; }
+.quest { color: #9dff9d; }
+
+#dialogHint {
+  display: none;
+  color: #ffe08a;
+  font-weight: bold;
+}
+
+#dialogBox {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  min-width: 300px;
+  max-width: 620px;
+  padding: 14px 18px;
+  background: rgba(5, 8, 20, 0.9);
+  border: 1px solid rgba(127, 216, 255, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  z-index: 20;
+}
+
+#dialogSpeaker {
+  color: #7fd8ff;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+#dialogText {
+  color: #eef6ff;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+#dialogChoices {
+  display: none;
+  margin-top: 12px;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.choiceBtn {
+  background: #1e3247;
+  color: white;
+  border: 1px solid rgba(127, 216, 255, 0.35);
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.choiceBtn:hover {
+  background: #27425d;
+}
+
+kbd {
+  background: #444;
+  border-radius: 3px;
+  padding: 1px 5px;
+  border: 1px solid #777;
+  color: yellow;
+}
